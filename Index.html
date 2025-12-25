@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Card 3D - Deep Parallax</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #0d0d0d;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .card-scene {
+            width: 450px; 
+            height: 675px;
+            perspective: 1500px; 
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            border-radius: 20px;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.9);
+            transform: rotateX(0deg) rotateY(0deg);
+            transition: transform 0.1s ease-out;
+        }
+
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            transform: translate(0, 0) scale(1.15);
+            will-change: transform;
+        }
+
+        /* 1. Background tagliato dai bordi della carta */
+        .bg-wrapper {
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* 2. Cornice (libera) */
+        #layout-frame { 
+            background-image: url('https://i.imgur.com/ao2qA6R.png'); 
+            z-index: 2; 
+        }
+
+        /* 3. Wrapper Personaggio con i tuoi valori di inset personalizzati */
+        .char-wrapper {
+            position: absolute;
+            inset: -37px -24px -37px -24px;
+            border-radius: 30px;
+            overflow: hidden;
+            z-index: 3;
+        }
+
+        /* Specifica per il character-layer per forzare la centratura */
+        #character-layer { 
+            background-image: url('https://i.imgur.com/CgxHgp9.png');
+            width: 450px; /* Dimensione originale della carta */
+            height: 675px;
+            top: 50%;
+            left: 50%;
+            /* translate(-50%, -50%) è gestito via JS per il movimento */
+        }
+
+        /* 4. Effetti */
+        #effects-layer { 
+            background-image: url('https://i.imgur.com/1V5qlqN.png'); 
+            z-index: 4; 
+        }
+
+        #background-image { background-image: url('https://i.imgur.com/rkbEE19.png'); }
+
+        .card.reset, .card.reset .layer {
+            transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card-scene" id="scene">
+        <div class="card" id="card">
+            
+            <div class="bg-wrapper">
+                <div class="layer" id="background-image" data-speed="20"></div>
+            </div>
+
+            <div class="layer" id="layout-frame" data-speed="0"></div>
+
+            <div class="char-wrapper">
+                <div class="layer" id="character-layer" data-speed="20"></div>
+            </div>
+
+            <div class="layer" id="effects-layer" data-speed="40"></div>
+            
+        </div>
+    </div>
+
+    <script>
+        const scene = document.getElementById('scene');
+        const card = document.getElementById('card');
+        const layers = document.querySelectorAll('.layer');
+
+        scene.addEventListener('mousemove', (e) => {
+            card.classList.remove('reset');
+
+            const rect = scene.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+
+            const rX = (y / rect.height) * -25; 
+            const rY = (x / rect.width) * 25;
+            card.style.transform = `rotateX(${rX}deg) rotateY(${rY}deg)`;
+
+            layers.forEach(layer => {
+                const speed = parseFloat(layer.getAttribute('data-speed'));
+                let xMove, yMove;
+
+                if (layer.id === 'background-image' || layer.id === 'character-layer') {
+                    xMove = (x / rect.width) * (speed * -1);
+                    yMove = (y / rect.height) * (speed * -1);
+                } else {
+                    xMove = (x / rect.width) * speed;
+                    yMove = (y / rect.height) * speed;
+                }
+                
+                // Gestione speciale per centrare il personaggio nel wrapper espanso
+                if (layer.id === 'character-layer') {
+                    layer.style.transform = `translate(calc(-50% + ${xMove}px), calc(-50% + ${yMove}px)) scale(1.15)`;
+                } else {
+                    layer.style.transform = `translate(${xMove}px, ${yMove}px) scale(1.15)`;
+                }
+            });
+        });
+
+        scene.addEventListener('mouseleave', () => {
+            card.classList.add('reset');
+            card.style.transform = `rotateX(0deg) rotateY(0deg)`;
+            layers.forEach(layer => {
+                // Reset con centratura per il personaggio
+                if (layer.id === 'character-layer') {
+                    layer.style.transform = `translate(-50%, -50%) scale(1.15)`;
+                } else {
+                    layer.style.transform = `translate(0px, 0px) scale(1.15)`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
