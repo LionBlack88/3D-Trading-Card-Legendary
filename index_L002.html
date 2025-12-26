@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Card 3D - Mobile & Desktop</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #0d0d0d;
+            margin: 0;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        /* Dimensioni base per Desktop */
+        .card-scene {
+            width: 450px; 
+            height: 675px;
+            perspective: 1500px; 
+            touch-action: none; /* Impedisce scroll durante il trascinamento */
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            border-radius: 20px;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.9);
+            transform: rotateX(0deg) rotateY(0deg);
+            transition: transform 0.1s ease-out;
+        }
+
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            transform: translate(0, 0) scale(1.15);
+            will-change: transform;
+        }
+
+        /* 1. Background */
+        .bg-wrapper {
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            overflow: hidden;
+            z-index: 1;
+        }
+        #background-image { background-image: url('IMG_L002/L002 1 Base.png'); }
+
+        /* 2. Cornice */
+        #layout-frame { 
+            background-image: url('IMG_L002/L002 2 livello.png'); 
+            z-index: 2; 
+        }
+
+        /* 3. Character Wrapper con Inset */
+        .char-wrapper {
+            position: absolute;
+            inset: -37px -24px -37px -24px;
+            border-radius: 30px;
+            overflow: hidden;
+            z-index: 3;
+        }
+
+        #character-layer { 
+            background-image: url('IMG_L002/L002 3 livello.png');
+            width: 450px; 
+            height: 675px;
+            top: 50%;
+            left: 50%; transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        /* 4. Effetti */
+        #effects-layer { 
+            background-image: url('IMG_L002/L002 4 livello.png'); 
+            z-index: 4; 
+        }
+
+        /* Animazione di reset fluida */
+        .card.reset, .card.reset .layer {
+            transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* --- RESPONSIVE PER MOBILE --- */
+        @media (max-width: 500px) {
+            .card-scene {
+                width: 300px;
+                height: 450px;
+            }
+            #character-layer {
+                width: 300px;
+                height: 450px;
+            }
+            .char-wrapper {
+                inset: -25px -16px -25px -16px; /* Inset ridotto proporzionalmente */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card-scene" id="scene">
+        <div class="card" id="card">
+            
+            <div class="bg-wrapper">
+                <div class="layer" id="background-image" data-speed="20"></div>
+            </div>
+
+            <div class="layer" id="layout-frame" data-speed="0"></div>
+
+            <div class="char-wrapper">
+                <div class="layer" id="character-layer" data-speed="20"></div>
+            </div>
+
+            <div class="layer" id="effects-layer" data-speed="40"></div>
+            
+        </div>
+    </div>
+
+    <script>
+        const scene = document.getElementById('scene');
+        const card = document.getElementById('card');
+        const layers = document.querySelectorAll('.layer');
+
+        // Funzione unificata per calcolare il movimento
+        function handleMove(clientX, clientY) {
+            card.classList.remove('reset');
+
+            const rect = scene.getBoundingClientRect();
+            
+            // Calcolo posizione relativa al centro della card
+            const x = clientX - rect.left - rect.width / 2;
+            const y = clientY - rect.top - rect.height / 2;
+
+            // Rotazione Card (3D)
+            const rX = (y / rect.height) * -25; 
+            const rY = (x / rect.width) * 25;
+            card.style.transform = `rotateX(${rX}deg) rotateY(${rY}deg)`;
+
+            // Movimento Livelli (Parallax)
+            layers.forEach(layer => {
+                const speed = parseFloat(layer.getAttribute('data-speed'));
+                let xMove, yMove;
+
+                // Invertiamo il movimento per sfondo e personaggio (effetto profondità)
+                if (layer.id === 'background-image' || layer.id === 'character-layer') {
+                    xMove = (x / rect.width) * (speed * -1);
+                    yMove = (y / rect.height) * (speed * -1);
+                } else {
+                    xMove = (x / rect.width) * speed;
+                    yMove = (y / rect.height) * speed;
+                }
+                
+                if (layer.id === 'character-layer') {
+                    // Mantiene la centratura per via del wrapper espanso
+                    layer.style.transform = `translate(calc(-50% + ${xMove}px), calc(-50% + ${yMove}px)) scale(1.15)`;
+                } else {
+                    layer.style.transform = `translate(${xMove}px, ${yMove}px) scale(1.15)`;
+                }
+            });
+        }
+
+        function resetCard() {
+            card.classList.add('reset');
+            card.style.transform = `rotateX(0deg) rotateY(0deg)`;
+            layers.forEach(layer => {
+                if (layer.id === 'character-layer') {
+                    layer.style.transform = `translate(-50%, -50%) scale(1.15)`;
+                } else {
+                    layer.style.transform = `translate(0px, 0px) scale(1.15)`;
+                }
+            });
+        }
+
+        // --- Eventi Mouse (Desktop) ---
+        scene.addEventListener('mousemove', (e) => {
+            handleMove(e.clientX, e.clientY);
+        });
+
+        scene.addEventListener('mouseleave', resetCard);
+
+        // --- Eventi Touch (Mobile) ---
+        scene.addEventListener('touchstart', (e) => {
+            card.classList.remove('reset');
+        }, { passive: true });
+
+        scene.addEventListener('touchmove', (e) => {
+            // Impedisce lo scroll mentre si interagisce con la carta
+            if (e.cancelable) e.preventDefault(); 
+            
+            const touch = e.touches[0];
+            handleMove(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        scene.addEventListener('touchend', resetCard);
+
+    </script>
+</body>
+</html>
